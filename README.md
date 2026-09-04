@@ -39,7 +39,7 @@ session2:dbs.createSession([endpoint:"localhost:8081"])
 
 ### Examples
 
-This section shows common DB Service q client workflows, including table management, data import, querying, and deleting tables.
+This section shows common DB Service q client workflows, including table management, data import, querying, configuration export, and deleting tables.
 
 #### Managing Tables
 Use these calls to define and inspect table schemas in DB Service.
@@ -49,10 +49,10 @@ Use these calls to define and inspect table schemas in DB Service.
 session.listTables[]
 
 // Define columns
-fxquoteCols:(`name`type!("trddate";"date");`name`type!("ts";"timestamp");`name`type`attrMem`attrDisk`attrOrd!("sym";"symbol";"grouped";"parted";"parted");`name`type!("bid";"float");`name`type!("ask";"float"))
+fxquoteCols:(([name:`trddate; colType:`date]);([name:`ts; colType:`timestamp]);([name:`sym; colType:`symbol; attrMem:`grouped; attrDisk:`parted; attrOrd:`parted]);([name:`bid; colType:`float]);([name:`ask; colType:`float]))
 
 // Create partitioned table ('fxquote')
-session.createTable`table`type`prtnCol`sortColsDisk`sortColsOrd`columns!("fxquote";"partitioned";"ts";enlist"sym";enlist"sym";fxquoteCols)
+session.createTable([table:`fxquote; tableType:`partitioned; prtnCol:`ts; sortColsDisk:enlist`sym; sortColsOrd:enlist`sym; columns:fxquoteCols])
 
 // List tables ('fxquote' table returned)
 session.listTables[]
@@ -113,6 +113,17 @@ session.querySQL([query:"SELECT * FROM instruments WHERE category LIKE 'EM'"])
 
 // qSQL query
 session.queryQ([query:"select o:first bid,h:max bid,l:min bid,c:last bid by trddate,sym from fxquote"])
+```
+
+#### Exporting Configuration
+Export the active assembly configuration as YAML, for single-node DB Service deployments.
+
+```q
+// Return the assembly YAML as a string
+assemblyYaml:session.exportAssembly[]
+
+// Save the assembly YAML to a file
+session.exportAssembly["assembly.yaml"]
 ```
 
 #### Deleting Tables
