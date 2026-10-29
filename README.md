@@ -52,7 +52,7 @@ session.listTables[]
 fxquoteCols:(([name:`trddate; colType:`date]);([name:`ts; colType:`timestamp]);([name:`sym; colType:`symbol; attrMem:`grouped; attrDisk:`parted; attrOrd:`parted]);([name:`bid; colType:`float]);([name:`ask; colType:`float]))
 
 // Create partitioned table ('fxquote')
-session.createTable([table:`fxquote; tableType:`partitioned; prtnCol:`ts; sortColsDisk:enlist`sym; sortColsOrd:enlist`sym; columns:fxquoteCols])
+session.createTable[`fxquote; ([tableType:`partitioned; prtnCol:`ts; sortColsDisk:enlist`sym; sortColsOrd:enlist`sym; columns:fxquoteCols])]
 
 // List tables ('fxquote' table returned)
 session.listTables[]
@@ -68,23 +68,23 @@ Any file you want to import must first be copied into the DB Service `imports` s
 ###### Import CSV
 ```q
 // Import a CSV file into the existing 'fxquote' table
-job:session.importFiles([table:"fxquote";path:"fxquote.csv.gz"])
+job:session.importFiles["fxquote";"fxquote.csv.gz"]
 
 // Check the status of the above import job
 session.getImport[job`name]
 
 // Import a parquet file into the existing 'fxquote' table
-session.importFiles([table:"fxquote";path:"fxquote.parquet"])
+session.importFiles["fxquote";"fxquote.parquet"]
 
 // Import a CSV file and create the 'instruments' table automatically if it does not exist
-job:session.importFiles([table:"instruments";path:"instruments.csv";createTable:1b])
+job:session.importFiles["instruments";"instruments.csv";([createTable:1b])]
 ```
 
 
 ###### Import Kdb database
 ```q
 // Import the 'fxquote' HDB table from the root kdb+ database directory 'fxquote-hdb'
-session.importKDB([table:"fxquote";path:"fxquote-hdb"])
+session.importKDB"fxquote-hdb"
 ```
 
 ###### Import JSON
@@ -92,11 +92,11 @@ Import rows directly from q without file staging.
 ```q
 // Objects payload imported to 'instruments' table
 data:([]instrumentid:77 78;sym:("USDBRL";"USDKRW");category:("EM";"EM");decimals:4 2;pipdecimals:4 2);
-session.importData([table:"instruments";data])
+session.importData["instruments";data]
 
 // Rows payload imported to the 'fxquote' table
 data:(("2026-01-21";"2026-01-21T10:00:00.000";"EURUSD";901.2;901.3);("2026-01-21";"2026-01-21T10:00:00.000";"EURUSD";901.2;901.3));
-session.importData([table:"fxquote";data;columnNames:`trddate`ts`sym`bid`ask])
+session.importData["fxquote";data;([columnNames:`trddate`ts`sym`bid`ask])]
 
 // Note: for rows payload, columnNames are required.
 ```
@@ -106,13 +106,13 @@ Run structured, SQL, or q queries against DB Service.
 
 ```q
 // Structured query
-session.querySimple([table:"fxquote";startTS:2026.03.02D;endTS:2026.03.03D;sortCols:enlist"ts";limit:5])
+session.querySimple["fxquote";([startTS:2026.03.02D;endTS:2026.03.03D;sortCols:enlist"ts";limit:5])]
 
 // SQL query
-session.querySQL([query:"SELECT * FROM instruments WHERE category LIKE 'EM'"])
+session.querySQL"SELECT * FROM instruments WHERE category LIKE 'EM'"
 
 // qSQL query
-session.queryQ([query:"select o:first bid,h:max bid,l:min bid,c:last bid by trddate,sym from fxquote"])
+session.queryQ"select o:first bid,h:max bid,l:min bid,c:last bid by trddate,sym from fxquote"
 ```
 
 #### Exporting Configuration
@@ -123,7 +123,7 @@ Export the active assembly configuration as YAML, for single-node DB Service dep
 assemblyYaml:session.exportAssembly[]
 
 // Save the assembly YAML to a file
-session.exportAssembly["assembly.yaml"]
+session.exportAssembly[([path:"assembly.yaml"])]
 ```
 
 #### Deleting Tables

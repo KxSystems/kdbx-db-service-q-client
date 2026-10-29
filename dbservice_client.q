@@ -2,69 +2,54 @@
 
 PREFIX:"/api/v0/"
 
-// @desc Extracts a string/symbol value from a provided dictionary key. If the input object
-// is not a dictionary, it is expected to be a string or a symbol and is returned as is.
-// @param k {symbol}             Lookup key.
-// @param x {dict|string|symbol} Input object.
-// @return  {string|symbol}      Extracted value.
-getKey:{[k;x]
-	$[99h<>type x;x;
-		not k in key x;'"Missing '",string[k],"'";
-		(t:type v:x k)in 10 -11h;v;
-		'typeErr["'",string[k],"'";t;10 -11h]]
-	}
-
 // Table containing API definitions, with the following columns:
-// - name      {symbol}            API name.
-// - method    {symbol}            HTTP method, one of 'GET', 'POST' or 'DELETE'.
-// - path      {string}            Base API path (follows host/port and PREFIX, may be followed by the output of 'suffixFn').
-// - argTypes  {short|short[]|()}  Accepted API argument types (if empty, the type check is skipped).
-// - suffixFn  {fn|boolean}        Function applied to the API argument returning the suffix string appended to 'path' (no suffix if 0b).
-// - bodyFn    {fn|boolean}        Function applied to the API argument returning the object converted to JSON request body (no request body if 0b).
-// - isQuery   {boolean}           Indicates if the request is a table data query.
-// - raw       {boolean}           Indicates the response body is returned as-is (e.g. YAML) rather than parsed as JSON, using an 'application/yaml' Accept header. If the API argument is a string, the raw response is also saved to that local file path.
+// - name      {symbol}              API name.
+// - method    {symbol}              HTTP method, one of 'GET', 'POST' or 'DELETE'.
+// - path      {string}              Base API path (follows host/port and PREFIX, may be followed by the output of 'suffixFn').
+// - reqArgs   {symbol|symbol[]|()}  Names of the required (positional) arguments, used to construct the full argument dictionary.
+// - suffixFn  {fn|boolean}          Function applied to the first required argument returning the suffix string appended to 'path' (no suffix if 0b).
+// - bodyFn    {fn|boolean}          Function converting the full argument dictionary to JSON request body (no request body if 0b).
+// - isQuery   {boolean}             Indicates if the request is a table data query.
+// - raw       {boolean}             Indicates the response body is returned as-is (e.g. YAML) rather than parsed as JSON, using an 'application/yaml' Accept header.
+//                                   If the API argument is a string, the raw response is also saved to that local file path.
 API:flip
-	(`name;           `method; `path;             `argTypes;  `suffixFn;    `bodyFn;    `isQuery; `raw)!
-	flip( /--------------------------------------------------------------------------------------------
-	(`createTable;    `POST;   "tables";          99h;        getKey`table; _[;`table]; 0b;       0b);
-	(`listTables;     `GET;    "tables";          ();         0b;           0b;         0b;       0b);
-	(`describeTable;  `GET;    "tables";          99 10 -11h; getKey`table; 0b;         0b;       0b);
-	(`dropTable;      `DELETE; "tables";          99 10 -11h; getKey`table; 0b;         0b;       0b);
-	(`importFiles;    `POST;   "imports/files";   99h;        0b;           ::;         0b;       0b);
-	(`importData;     `POST;   "imports/data";    99h;        0b;           ::;         0b;       0b);
-	(`importKDB;      `POST;   "imports/kdb";     99h;        0b;           ::;         0b;       0b);
-	(`getImport;      `GET;    "imports";         99 10 -11h; getKey`jobId; 0b;         0b;       0b);
-	(`cancelImport;   `DELETE; "imports";         99 10 -11h; getKey`jobId; 0b;         0b;       0b);
-	(`deleteRows;     `POST;   "deletes";         99h;        0b;           ::;         0b;       0b);
-	(`getDelete;      `GET;    "deletes";         99 10 -11h; getKey`jobId; 0b;         0b;       0b);
-	(`cancelDelete;   `DELETE; "deletes";         99 10 -11h; getKey`jobId; 0b;         0b;       0b);
-	(`querySimple;    `POST;   "query/simple";    99h;        0b;           ::;         1b;       0b);
-	(`querySQL;       `POST;   "query/sql";       10 99h;     0b;           ::;         1b;       0b);
-	(`queryQ;         `POST;   "query/q";         10 99h;     0b;           ::;         1b;       0b);
-	(`queryPreview;   `POST;   "query/preview";   10 99h;     0b;           ::;         1b;       0b);
-	(`exportAssembly; `GET;    "config/assembly"; ();         0b;           0b;         0b;       1b))
+	(`name;           `method; `path;             `reqArgs;      `suffixFn; `bodyFn;    `isQuery; `raw)!
+	flip( /---------------------------------------------------------------------------------------------
+	(`createTable;    `POST;   "tables";          `table;        ::;        _[;`table]; 0b;       0b);
+	(`listTables;     `GET;    "tables";          ();            0b;        0b;         0b;       0b);
+	(`describeTable;  `GET;    "tables";          `table;        ::;        0b;         0b;       0b);
+	(`dropTable;      `DELETE; "tables";          `table;        ::;        0b;         0b;       0b);
+	(`importFiles;    `POST;   "imports/files";   `table`path;   0b;        ::;         0b;       0b);
+	(`importData;     `POST;   "imports/data";    `table`data;   0b;        ::;         0b;       0b);
+	(`importKDB;      `POST;   "imports/kdb";     `path;         0b;        ::;         0b;       0b);
+	(`getImport;      `GET;    "imports";         `jobId;        ::;        0b;         0b;       0b);
+	(`cancelImport;   `DELETE; "imports";         `jobId;        ::;        0b;         0b;       0b);
+	(`deleteRows;     `POST;   "deletes";         `table`filter; 0b;        ::;         0b;       0b);
+	(`getDelete;      `GET;    "deletes";         `jobId;        ::;        0b;         0b;       0b);
+	(`cancelDelete;   `DELETE; "deletes";         `jobId;        ::;        0b;         0b;       0b);
+	(`querySimple;    `POST;   "query/simple";    `table;        0b;        ::;         1b;       0b);
+	(`querySQL;       `POST;   "query/sql";       `query;        0b;        ::;         1b;       0b);
+	(`queryQ;         `POST;   "query/q";         `query;        0b;        ::;         1b;       0b);
+	(`queryPreview;   `POST;   "query/preview";   `table;        0b;        ::;         1b;       0b);
+	(`exportAssembly; `GET;    "config/assembly"; ();            0b;        0b;         0b;       1b))
 
-// @desc Request handler. The last argument is projected by 'createSession' when it generates each API.
+// @desc Request handler. The first two arguments are filled by 'createSession' when it generates each API.
+// The last argument is provided by the user (as separate function parameters) at request API call time.
 // @param endpoint {string}  Endpoint host/port.
 // @param api      {dict}    A row from the API definition table.
-// @param arg      {any}     API argument.
+// @param params   {list}    List of parameters provided by the user.
 // @return         {any}     Formatted API response (see 'formatResp' for details).
-request:{[endpoint;api;arg]
-	([method;path;argTypes;suffixFn;bodyFn;isQuery;raw]):api;
-	if[count argTypes; / If arg type check is enabled
-		if[not(t:type arg)in argTypes;'typeErr["argument";t;argTypes]]];
+request:{[endpoint;api;params]
+	([method;path;reqArgs;suffixFn;bodyFn;isQuery;raw]):api;
+	arg:getArgDict[reqArgs,:();params];
 	if[isQuery;
-		if[10h=type arg;arg:([query:arg])]; / Wrap if the query is provided as a string
-		unwrap:not 0b~arg`unwrap; / Determine if the header should be included in the response
+		unwrap:$[`unwrap in key arg;arg`unwrap;1b]; / Determine if the header should be dropped (default) from the successful response
 		arg _:`unwrap]; / Drop the key that is only relevant for the client
-	suffix:$[suffixFn~0b;""; / Generate the path suffix if applicable
-		1b~first r:@[(1b;)suffixFn@;arg;::];"/",$[-11h=type s;string;]s:last r;
-		'r]; / Re-throw the caught error here to avoid a debug session
-	if[99h=type arg;
-		if[`assembly in key arg; / Move assembly specification to the suffix
-			t:type a:arg`assembly;
-			suffix,:"?assembly=",$[10h=t;a;-11h=t;string a;'typeErr["'assembly'";t;10 -11h]];
-			arg _:`assembly]];
+	str:{$[10h=t:type y;y;-11h=t;string y;typeErr[x;t;10 -11h]]}; / Returns 'y' converted to a string or throws a type error message with description 'x'
+	suffix:$[suffixFn~0b;"";"/",str["first parameter (",string[reqArgs 0],")"]suffixFn params 0]; / Generate the path suffix if applicable
+	if[`assembly in key arg; / Move assembly specification to the suffix
+		suffix,:"?assembly=",str["'assembly'"]arg`assembly;
+		arg _:`assembly];
 	url:endpoint,PREFIX,path,suffix; / Construct the full request URL
 	headers:([Accept:"application/",$[isQuery;"octet-stream";raw;"yaml";"json"]]); / Binary payload for queries, YAML for raw responses, JSON otherwise
 	if[b:not 0b~bodyFn;headers[`$"Content-Type"]:"application/json"]; / Request payload (if applicable) is JSON
@@ -72,16 +57,31 @@ request:{[endpoint;api;arg]
 	(status;body):@[sync;(url;method;opts);{'"Unable to send request (",string[x]," ",y,"): ",z}[method;url]]; / Send request
 	res:formatResp[status;body;isQuery;raw;unwrap];
 	if[raw and(string status)like"20*";
-		if[10h=type arg;hsym[`$arg]1:res]]; / Optionally save a successful raw response to a local file
+		if[`path in key arg;hsym[`$str["'path'"]arg`path]1:res]]; / Optionally save a successful raw response to a local file
 	res
 	}
 
-// @desc Generates an error message for an unexpected object type.
+// @desc Constructs the full argument dictionary from the list of required and optional parameters.
+// @param reqArgs {symbol[]} Names of the required (positional) arguments.
+// @param params  {list}     Parameters provided by the user, either conforming to 'reqArgs' or with one additional
+//                           last element, which is expected to be a dictionary containing the optional parameters.
+// @return        {dict}     Dictionary containing required and optional parameters.
+getArgDict:{[reqArgs;params]
+	chk:{$[11h=t:type key x;x;typeErr["optional parameter key";t;11h]]}; / Returns the optional parameter dict after checking that it is keyed by symbols
+	(p;r):count each(params;reqArgs);
+	$[not p in r+0 1;'"Unexpected number of parameters (",string[p],"), must be ",string[r],$[r;" (",(", "sv string reqArgs),")";""]," + 1 optional";
+		p=r;reqArgs!params; / No optional parameter dict passed
+		0=count o:last params;reqArgs!1_params; / No values passed in the optional parameter (accept untyped empty list or dict)
+		r=0;$[99h=type o;chk o;([])]; / If there are no required parameters, ignore the passed parameter unless it is a dict
+		99h<>t:type o;typeErr["optional parameter";t;99h]; / Optional parameters must be passed in a dict
+		(reqArgs!-1_params),chk o] / Combine required and optional parameters
+	}
+
+// @desc Throws an error for an unexpected object type.
 // @param n {string}        Name of the checked object.
 // @param t {short}         Type of the checked object.
 // @param x {short|short[]} Expected types.
-// @return  {string}        Error message.
-typeErr:{[n;t;x]"Unexpected ",n," type (",string[t],"h), must be ",$[1=count x;"";"one of "],.Q.s1 x}
+typeErr:{[n;t;x]'"Unexpected ",n," type (",string[t],"h), must be ",$[1=count x;"";"one of "],.Q.s1 x}
 
 // @desc Formats an API response.
 // @param status   {int}      Response status code.
@@ -112,7 +112,7 @@ formatResp:{[status;body;isQuery;raw;unwrap]
 				$[raw;body;@[.j.k;body;{'"Unable to parse JSON response (",y,"): ",x}body]]]; / Return the body as-is for a raw response, otherwise parsed JSON
 			[ / Regular request response has error status
 				$[first d:@[{(0b;.j.k x)};body;1b];([status;error:body]); / Return raw response string as error if it could not be parsed
-					99h<>type r:d 1;([status;error:.Q.s1 r]); / Return stringified parsed payload as error if it has unexpected type
+					99h<>t:type r:d 1;([status;error:$[t=10h;;.Q.s1]r]); / Return stringified parsed payload as error if it has unexpected type
 					formatErrResp[status;r]]]]] / Return a properly formatted error response
 	}
 
@@ -145,12 +145,12 @@ formatErrResp:{[status;body]
 // @desc Creates a client session by generating the request handlers for each defined API and a given endpoint.
 // @param x  {any}   Endpoint host/port info. Can be provided directly as a string, or as a dictionary with a string 'endpoint' entry.
 //                   If empty or null, the default http://localhost:8080 is used.
-// @return   {dict}  Request handlers (projections of 'request').
+// @return   {dict}  Request handlers (projections of 'request' composed with 'enlist' for variadic syntax).
 createSession:{
 	e:$[10h=t:type x;x;99h<>t;::;`endpoint in key x;x`endpoint;::]; / Extract endpoint from the argument
 	endpoint:$[e~(::);"http://localhost:8080"; / Use default endpoint if not provided
 		any e like/:("http://*";"https://*");e;"http://",e]; / Ensure prefix
-	API[`name]!request[endpoint]@'API
+	API[`name]!{('[@[x y;;{'x}];enlist])}[request endpoint]each API / Re-throw errors to avoid debug session
 	}
 
 export:([createSession])
